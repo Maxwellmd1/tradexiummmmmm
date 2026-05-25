@@ -1,0 +1,12 @@
+{
+  "name": "Tradexium Trading Platform",
+  "description": "Professional-grade trading platform featuring a real-time terminal, secure Admin Dashboard, and automated registration reporting.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

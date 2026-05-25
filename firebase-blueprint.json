@@ -1,0 +1,131 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Represents a trader in the system.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Full name of the trader." },
+        "email": { "type": "string", "format": "email", "description": "Email address." },
+        "customerId": { "type": "string", "description": "Unique identifier for the customer." },
+        "balance": { "type": "number", "description": "Current account balance." },
+        "role": { "type": "string", "enum": ["USER", "ADMIN"], "description": "User permissions level." },
+        "maintenanceRequired": { "type": "boolean", "description": "Whether to show the maintenance warning to the user." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of account creation." }
+      },
+      "required": ["name", "email", "customerId", "balance", "role", "createdAt"]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "Represents a deposit or withdrawal request.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner of the payment." },
+        "userName": { "type": "string", "description": "Name of the user at request time." },
+        "userEmail": { "type": "string", "description": "Email of the user at request time." },
+        "amount": { "type": "number", "description": "Amount in USD." },
+        "status": { "type": "string", "enum": ["PENDING", "CONFIRMED", "REJECTED"], "description": "Current status of the request." },
+        "type": { "type": "string", "enum": ["DEPOSIT", "WITHDRAWAL"], "description": "Transaction type." },
+        "method": { "type": "string", "description": "Payment method used (CRYPTO, WIRE, GIFT)." },
+        "cryptoType": { "type": "string", "description": "Asset type if crypto (BTC, ETH, etc.)." },
+        "giftCardType": { "type": "string", "description": "Brand of gift card if applicable." },
+        "giftCardNumber": { "type": "string", "description": "Gift card code or PIN provided by user." },
+        "cardImageUrl": { "type": "string", "description": "Proof of payment image URL." },
+        "withdrawalAddress": { "type": "string", "description": "Destination address for withdrawals." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the request was made." },
+        "processedAt": { "type": "string", "format": "date-time", "description": "When the admin confirmed/rejected it." }
+      },
+      "required": ["userId", "amount", "status", "type", "createdAt"]
+    },
+    "SupportMessage": {
+      "title": "Support Message",
+      "description": "A single message in a support conversation.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "The user this conversation belongs to." },
+        "senderId": { "type": "string", "description": "The ID of the person who wrote the message." },
+        "senderName": { "type": "string", "description": "Display name of the sender." },
+        "text": { "type": "string", "description": "Content of the message." },
+        "isAdmin": { "type": "boolean", "description": "Whether the sender is a staff member." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the message was sent." }
+      },
+      "required": ["userId", "senderId", "text", "createdAt"]
+    },
+    "SystemError": {
+      "title": "System Error",
+      "description": "Logs of client-side errors.",
+      "type": "object",
+      "properties": {
+        "message": { "type": "string" },
+        "stack": { "type": "string" },
+        "userId": { "type": "string" },
+        "url": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["message", "createdAt"]
+    },
+    "Email": {
+      "title": "Email Message",
+      "description": "Represents an outbound email queued for delivery.",
+      "type": "object",
+      "properties": {
+        "to": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Recipient email addresses."
+        },
+        "message": {
+          "type": "object",
+          "properties": {
+            "subject": { "type": "string" },
+            "text": { "type": "string" },
+            "html": { "type": "string" }
+          },
+          "required": ["subject", "html"]
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["to", "message", "createdAt"]
+    },
+    "Trade": {
+      "title": "Trade",
+      "description": "Represents a logged trade or administrative simulated trade.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "The target trader's UID." },
+        "asset": { "type": "string", "description": "Trading asset (e.g., BTC/USDT)." },
+        "amount": { "type": "number", "description": "The P/L real value." },
+        "type": { "type": "string", "enum": ["Trade"], "description": "Fixed categorization code." },
+        "status": { "type": "string", "enum": ["Success", "Pending", "Rejected"], "description": "Validation result." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Realized timestamp." }
+      },
+      "required": ["userId", "asset", "amount", "type", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles and account state."
+    },
+    "/trades/{tradeId}": {
+      "schema": "Trade",
+      "description": "Logged trades and simulated trades."
+    },
+    "/payments/{paymentId}": {
+      "schema": "Payment",
+      "description": "Ledger for manual payment confirmations."
+    },
+    "/support_messages/{messageId}": {
+      "schema": "SupportMessage",
+      "description": "Individual support chat messages."
+    },
+    "/system_errors/{errorId}": {
+      "schema": "SystemError",
+      "description": "Critical runtime failures."
+    },
+    "/emails/{emailId}": {
+      "schema": "Email",
+      "description": "Automated email outbound queue."
+    }
+  }
+}

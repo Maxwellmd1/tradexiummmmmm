@@ -1,0 +1,97 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.get('email', '') == 'tradexiumpro@gmail.com' ||
+        request.auth.token.get('email', '') == 'emmanuelagbonye@gmail.com' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'USER') == 'ADMIN')
+      );
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    function isValidSupportMessage(data) {
+      return data.userId != null &&
+             data.senderId != null &&
+             data.text != null &&
+             data.isAdmin != null &&
+             data.createdAt == request.time;
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if true;
+      allow update: if isAdmin() || (
+        isOwner(userId) && 
+        incoming().get('role', 'USER') == existing().get('role', 'USER') &&
+        incoming().get('balance', 0) == existing().get('balance', 0) &&
+        incoming().get('maintenanceRequired', false) == existing().get('maintenanceRequired', false) &&
+        incoming().get('minWithdrawalLimitEnabled', true) == existing().get('minWithdrawalLimitEnabled', true) &&
+        incoming().get('minWithdrawalLimitAmount', 10000) == existing().get('minWithdrawalLimitAmount', 10000)
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /payments/{paymentId} {
+      allow get: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin());
+      allow list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin() && (
+        existing().status == 'PENDING' &&
+        incoming().status in ['CONFIRMED', 'REJECTED'] &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'processedAt', 'rejectedAt'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /support_messages/{messageId} {
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && isValidSupportMessage(incoming()) && (incoming().userId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /admin_notifications/{nodeId} {
+      allow read, list, update, delete: if isAdmin();
+      allow create: if true;
+    }
+
+    match /emails/{emailId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /system_errors/{errorId} {
+      allow read, list, delete: if isAdmin();
+      allow create: if true; // Allow anyone to report errors
+    }
+
+    match /trades/{tradeId} {
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && (incoming().userId == request.auth.uid || isAdmin());
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /system_diagnostics/{docId} {
+      allow get: if true;
+    }
+  }
+}
